@@ -1047,7 +1047,7 @@
       var cl = pl.classList;
       var ad = cl.contains('ad-showing') || cl.contains('ad-interrupting');
       if (ad) {
-        if (!adState.on) { adState.on = true; adState.muted = v.muted; adState.rate = v.playbackRate || 1; }
+        if (!adState.on) { adState.on = true; adState.muted = false; adState.rate = v.playbackRate || 1; } // app không có phím tắt tiếng: sau quảng cáo luôn bật lại tiếng
         v.muted = true;
         if (clickSkip(true)) return;
         if (isFinite(v.duration) && v.duration > 0 && v.currentTime < v.duration - 0.3) {
@@ -1062,6 +1062,23 @@
     } catch (e) {}
   }
   setInterval(adTick, 400);
+
+  // Chống mất tiếng: đôi khi YouTube cho video chạy ở chế độ tắt tiếng ("Bấm để bật tiếng"). App không có phím tắt tiếng,
+  // nên nếu video đang xem bị tắt tiếng (ngoài lúc quảng cáo do app tự tắt) thì tự bật lại ngay.
+  function unmuteTick() {
+    try {
+      if (!/^\/(watch|shorts)/.test(location.pathname)) return;
+      var pl = player(), v = document.querySelector('video');
+      if (!v || adState.on) return;
+      if (pl && pl.classList && (pl.classList.contains('ad-showing') || pl.classList.contains('ad-interrupting'))) return;
+      if (v.muted) {
+        try { if (pl && pl.unMute) pl.unMute(); } catch (e) {}
+        v.muted = false;
+      }
+      try { if (pl && pl.getVolume && pl.setVolume && pl.getVolume() === 0) pl.setVolume(100); } catch (e) {}
+    } catch (e) {}
+  }
+  setInterval(unmuteTick, 300);
 
   var lastVid = null, qTries = 0, capVid = null;
   var QORDER = ['hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
